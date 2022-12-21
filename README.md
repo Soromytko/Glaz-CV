@@ -1,13 +1,16 @@
-# Поиск похожих изоражений
+# Поиск похожих изоражений (нейронка)
 
 ## Зависимости
 * pip install streamlit
 * pip install opencv-python
 * pip install pandas
 * pip install sklearn
-* pip install -U scikit-learn _(for KMeans)_
+* pip install kmeans
 * pip install pathlib
 * pip install tqdm
+* pip install resnet
+* pip install open-clip-torch
+
 
 ## Установка
 
