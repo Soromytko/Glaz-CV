@@ -5,3 +5,5 @@ pip install sklearn
 pip install -U scikit-learn
 pip install pathlib
 pip install tqdm
+pip install resnet
+pip install open-clip-torch

@@ -8,42 +8,42 @@ import glob
 from pathlib import Path
 from joblib import dump, load
 from init_database import encode_to_vector
+from init_database import create_model
 from sklearn.neighbors import NearestNeighbors
 
+from PIL import Image, ImageOps
+import torch
+import open_clip
 
 FILE_FORMATS = ['jpg', 'png', 'jpeg']
-
 
 if __name__ == '__main__':
     uploaded_file = st.file_uploader("Choose a image file", type=FILE_FORMATS)
     if uploaded_file is not None:
-        # Convert the file to an opencv image.
-        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-        opencv_image = cv2.imdecode(file_bytes, 1)
-      
-        # Now do something with the image! For example, let's display it:
-        # st.write("Loaded image:")
-        st.image(opencv_image, channels="BGR", caption='Loaded image')
+        img = Image.open(uploaded_file).convert('RGB')
+        img = ImageOps.exif_transpose(img)
+        
+        db = pd.read_pickle('db_net.csv')
+        nbrs = NearestNeighbors(n_neighbors=5, metric='cosine', n_jobs=-1)
+        nbrs.fit(np.stack(db['vectors'].to_numpy()))
+        neighbours = nbrs
 
+        #model, _, preprocess = open_clip.create_model_and_transforms('ViT-B-32', pretrained='laion400m_e32')
+        model, val, preprocess = create_model()
+        
+        vector = None
+        with torch.no_grad():
+            image = preprocess(img).unsqueeze(0)
+            vector = encode_to_vector(image, model)
+            
+        if vector is not None:
+            indices = neighbours.kneighbors(vector, return_distance=False)[0]
+            paths = np.hstack(db.loc[indices, ['paths']].values)
 
-        db = pd.read_pickle('db.csv')
-        model = load('model.joblib')
-        
-        db = pd.read_pickle('db2048.csv')
-        model = load('model2048')
-        
-        # gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        gray = cv2.imdecode(file_bytes, cv2.IMREAD_GRAYSCALE)
-        
-        neighbours = NearestNeighbors(n_neighbors=5, metric='cosine', n_jobs=-1)
-        neighbours.fit(np.stack(db['vectors'].to_numpy()))
-        vector = encode_to_vector(gray, model)
-        indices = neighbours.kneighbors(vector.reshape(1, -1), return_distance=False)[0]
-        paths = np.hstack(db.loc[indices, ['paths']].values)
-        for path in paths:
-            #path = path.replace('\\', '/') #for Linux
-            print(path)
-            st.image(path, caption=path)
+            for path in paths:
+                st.image(path, caption=path)
+        else:
+            print('vector is None!', vector)    
     else:
         st.write("Make sure you image is in JPG/PNG Format.")
 
